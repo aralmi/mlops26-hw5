@@ -3,14 +3,14 @@ name = "mlops-hw5"
 version = "0.1.0"
 description = "MLOPS-26, домашняя работа 5: первый LoRA-ран на своём датасете"
 requires-python = ">=3.12"
-# Нижние границы, точные версии фиксирует uv.lock.
-# peft>=0.14 — layers_to_transform и save_pretrained без лишних модулей.
+# Зависимости и транзитивные пакеты фиксируются в uv.lock.
 dependencies = [
-    "torch>=2.5",
-    "transformers>=4.51",
-    "peft>=0.14",
-    "numpy>=2.1",
-    "pyyaml>=6.0",
+    "torch==2.9.1",
+    "transformers==4.57.1",
+    "peft>=0.17,<0.19",
+    "numpy==2.3.2",
+    "pyyaml==6.0.3",
     "matplotlib>=3.9",
     "psutil>=5.9",
+    "dvc==3.67.1",
 ]

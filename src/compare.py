@@ -18,11 +18,14 @@ from src.runtime import resolve_device, resolve_dtype
 
 
 def load_adapter_tokenizer(adapter_dir: Path):
-    return AutoTokenizer.from_pretrained(load_params()["model"]["name"])
+    return AutoTokenizer.from_pretrained(adapter_dir, local_files_only=True)
 
 
 @torch.no_grad()
 def generate(model, tok, prompts: list[str], system: str, params: dict, device) -> list[str]:
+    if device.type == "cpu":
+        torch.set_num_threads(params["model"].get("cpu_threads", 4))
+    model.set_attn_implementation(params["model"].get("attn_implementation", "sdpa"))
     out = []
     for user in prompts:
         messages = [{"role": "system", "content": system}, {"role": "user", "content": user}]
@@ -30,7 +33,7 @@ def generate(model, tok, prompts: list[str], system: str, params: dict, device) 
             messages, tokenize=False, add_generation_prompt=True,
             enable_thinking=params["model"].get("enable_thinking", False),
         )
-        ids = tok(text, return_tensors="pt").to(device)
+        ids = tok(text, add_special_tokens=False, return_tensors="pt").to(device)
         gen = model.generate(**ids, max_new_tokens=params["compare"]["max_new_tokens"],
                              do_sample=False, pad_token_id=tok.pad_token_id)
         out.append(tok.decode(gen[0, ids["input_ids"].shape[1]:], skip_special_tokens=True).strip())
@@ -72,8 +75,12 @@ def main() -> None:
              f"Адаптер: `{adapter_dir}`. Генерация жадная, до {params['compare']['max_new_tokens']} токенов.", ""]
     for i, (p, b, a) in enumerate(zip(prompts, before, after), 1):
         q = p.split("Вопрос:\n")[-1].split("\n\nВарианты")[0]
-        lines += [f"## {i}. {q}", "", "**База:**", "", f"> {b.replace(chr(10), ' / ')}", "",
-                  "**Адаптер:**", "", f"> {a.replace(chr(10), ' / ')}", ""]
+        # Отдельная цитата ограничивает Markdown каждого ответа, даже если
+        # лимит токенов оборвал сгенерированный блок кода до закрывающего ```.
+        b_quote = "\n".join("> " + line if line else ">" for line in b.splitlines())
+        a_quote = "\n".join("> " + line if line else ">" for line in a.splitlines())
+        lines += [f"## {i}. {q}", "", "### База", "", b_quote, "",
+                  "### Адаптер", "", a_quote, ""]
     Path(params["paths"]["compare"]).write_text("\n".join(lines), encoding="utf-8")
     print(f"-> {out}, {params['paths']['compare']}")
     for b, a in zip(before, after):

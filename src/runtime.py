@@ -6,6 +6,7 @@ params.yaml. Смена железа — правка конфига, а не к
 
 import os
 import random
+import sys
 
 import numpy as np
 import psutil
@@ -38,16 +39,26 @@ def set_seed(seed: int) -> None:
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
+    torch.use_deterministic_algorithms(True)
+    if torch.backends.mps.is_available():
+        torch.mps.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
     os.environ["PYTHONHASHSEED"] = str(seed)
 
 
 def allocated_bytes(device: torch.device) -> int:
-    """Память, занятая тензорами сейчас. На ускорителе — его аллокатор, а не RSS:
-    урок ДЗ 2, на Apple Silicon RSS не видит буферы Metal."""
+    """Аллокатор ускорителя; на CPU — пик RSS процесса, фиксируемый ОС."""
     if device.type == "mps":
         return torch.mps.driver_allocated_memory()
     if device.type == "cuda":
         return torch.cuda.memory_allocated()
+    if os.name == "posix":
+        import resource
+        peak_rss = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+        return peak_rss if sys.platform == "darwin" else peak_rss * 1024
     return psutil.Process().memory_info().rss
 
 
@@ -55,4 +66,4 @@ def memory_metric(device: torch.device) -> str:
     return {
         "mps": "torch.mps.driver_allocated_memory",
         "cuda": "torch.cuda.memory_allocated",
-    }.get(device.type, "RSS процесса")
+    }.get(device.type, "ru_maxrss (пик RSS процесса)" if os.name == "posix" else "RSS процесса")

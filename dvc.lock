@@ -1,0 +1,279 @@
+schema: '2.0'
+stages:
+  train_all:
+    cmd: python -m src.train --variant all_layers
+    deps:
+    - path: data/tokenized/train.pt
+      hash: md5
+      md5: 5f552be79c6600a6ff9c35689cc498c2
+      size: 8336737
+    - path: data/tokenized/val.pt
+      hash: md5
+      md5: 6c63f6db60a3029bf58df8d4e545a85a
+      size: 838485
+    - path: pyproject.toml
+      hash: md5
+      md5: e9834c93031522325a8e94a82e4dfd53
+      size: 485
+    - path: src/config.py
+      hash: md5
+      md5: d1af94455f9641952ff6c34f46ac6060
+      size: 336
+    - path: src/data.py
+      hash: md5
+      md5: 6c46f3f1fb30184ffee05c3da654874c
+      size: 1984
+    - path: src/runtime.py
+      hash: md5
+      md5: b01659ee570313dcda7ea4e08608be4f
+      size: 2694
+    - path: src/train.py
+      hash: md5
+      md5: 4099af425be05702abc5b83c056d735b
+      size: 25006
+    - path: uv.lock
+      hash: md5
+      md5: 0152d040452eaf3ba140e5c58a2ba452
+      size: 639144
+    params:
+      params.yaml:
+        data:
+          train: data/tokenized/train.pt
+          val: data/tokenized/val.pt
+        lora:
+          r: 8
+          alpha: 16
+          dropout: 0.05
+          target_modules:
+          - q_proj
+          - k_proj
+          - v_proj
+          - o_proj
+          - gate_proj
+          - up_proj
+          - down_proj
+        model:
+          name: Qwen/Qwen3-0.6B
+          device: cpu
+          dtype: float32
+          cpu_threads: 4
+          attn_implementation: sdpa
+          enable_thinking: false
+        train:
+          seed: 42
+          train_limit: 256
+          val_limit: 32
+          subset_seed: 42
+          epochs: 1
+          batch_size: 1
+          grad_accum: 8
+          lr: 0.0002
+          warmup_ratio: 0.03
+          weight_decay: 0.0
+          max_grad_norm: 1.0
+          loss_chunk_tokens: 128
+          eval_every: 10
+          eval_batch_size: 1
+          gradient_checkpointing: true
+          gradient_checkpointing_min_tokens: 1024
+          max_steps:
+        variants:
+        - name: all_layers
+          freeze_first: 0
+        - name: freeze14
+          freeze_first: 14
+    outs:
+    - path: metrics/train_all_layers.json
+      hash: md5
+      md5: 55883d0f2099e3b580b86dec0b00bd66
+      size: 5540
+    - path: models/adapter_all_layers
+      hash: md5
+      md5: 91679beb7688f348147f14c86a20142b.dir
+      size: 36124933
+      nfiles: 10
+  train_freeze:
+    cmd: python -m src.train --variant freeze14
+    deps:
+    - path: data/tokenized/train.pt
+      hash: md5
+      md5: 5f552be79c6600a6ff9c35689cc498c2
+      size: 8336737
+    - path: data/tokenized/val.pt
+      hash: md5
+      md5: 6c63f6db60a3029bf58df8d4e545a85a
+      size: 838485
+    - path: pyproject.toml
+      hash: md5
+      md5: e9834c93031522325a8e94a82e4dfd53
+      size: 485
+    - path: src/config.py
+      hash: md5
+      md5: d1af94455f9641952ff6c34f46ac6060
+      size: 336
+    - path: src/data.py
+      hash: md5
+      md5: 6c46f3f1fb30184ffee05c3da654874c
+      size: 1984
+    - path: src/runtime.py
+      hash: md5
+      md5: b01659ee570313dcda7ea4e08608be4f
+      size: 2694
+    - path: src/train.py
+      hash: md5
+      md5: 4099af425be05702abc5b83c056d735b
+      size: 25006
+    - path: uv.lock
+      hash: md5
+      md5: 0152d040452eaf3ba140e5c58a2ba452
+      size: 639144
+    params:
+      params.yaml:
+        data:
+          train: data/tokenized/train.pt
+          val: data/tokenized/val.pt
+        lora:
+          r: 8
+          alpha: 16
+          dropout: 0.05
+          target_modules:
+          - q_proj
+          - k_proj
+          - v_proj
+          - o_proj
+          - gate_proj
+          - up_proj
+          - down_proj
+        model:
+          name: Qwen/Qwen3-0.6B
+          device: cpu
+          dtype: float32
+          cpu_threads: 4
+          attn_implementation: sdpa
+          enable_thinking: false
+        train:
+          seed: 42
+          train_limit: 256
+          val_limit: 32
+          subset_seed: 42
+          epochs: 1
+          batch_size: 1
+          grad_accum: 8
+          lr: 0.0002
+          warmup_ratio: 0.03
+          weight_decay: 0.0
+          max_grad_norm: 1.0
+          loss_chunk_tokens: 128
+          eval_every: 10
+          eval_batch_size: 1
+          gradient_checkpointing: true
+          gradient_checkpointing_min_tokens: 1024
+          max_steps:
+        variants:
+        - name: all_layers
+          freeze_first: 0
+        - name: freeze14
+          freeze_first: 14
+    outs:
+    - path: metrics/train_freeze14.json
+      hash: md5
+      md5: c3f47769bd43943e381983a5668f37bb
+      size: 5540
+    - path: models/adapter_freeze14
+      hash: md5
+      md5: fe30f6102a2090924750c6ea60da78f1.dir
+      size: 26006685
+      nfiles: 10
+  plot:
+    cmd: python -m src.plot
+    deps:
+    - path: metrics/train_all_layers.json
+      hash: md5
+      md5: 55883d0f2099e3b580b86dec0b00bd66
+      size: 5540
+    - path: metrics/train_freeze14.json
+      hash: md5
+      md5: c3f47769bd43943e381983a5668f37bb
+      size: 5540
+    - path: src/config.py
+      hash: md5
+      md5: d1af94455f9641952ff6c34f46ac6060
+      size: 336
+    - path: src/plot.py
+      hash: md5
+      md5: 053bc1294e4251d5ea3f3e2adf294dc7
+      size: 1604
+    params:
+      params.yaml:
+        paths.curves: docs/curves.png
+    outs:
+    - path: docs/curves.png
+      hash: md5
+      md5: 901e2077f83216667ce13f658f2c1169
+      size: 99163
+  compare:
+    cmd: python -m src.compare --variant all_layers
+    deps:
+    - path: models/adapter_all_layers
+      hash: md5
+      md5: 91679beb7688f348147f14c86a20142b.dir
+      size: 36124933
+      nfiles: 10
+    - path: pyproject.toml
+      hash: md5
+      md5: e9834c93031522325a8e94a82e4dfd53
+      size: 485
+    - path: src/compare.py
+      hash: md5
+      md5: bf3b09452d0c2b9520abda5034b13846
+      size: 4704
+    - path: src/config.py
+      hash: md5
+      md5: d1af94455f9641952ff6c34f46ac6060
+      size: 336
+    - path: src/runtime.py
+      hash: md5
+      md5: b01659ee570313dcda7ea4e08608be4f
+      size: 2694
+    - path: uv.lock
+      hash: md5
+      md5: 0152d040452eaf3ba140e5c58a2ba452
+      size: 639144
+    params:
+      params.yaml:
+        compare:
+          max_new_tokens: 192
+          prompts:
+          - How do I get the last value of a pandas Series when its index labels
+            are not consecutive?
+          - How do I convert a pandas DataFrame to a list of dictionaries
+            without including the row index?
+          - Can I set a pandas DataFrame index name in the constructor? Show a
+            short code example.
+          - "Why does assigning to df.iloc[i, j] raise 'IndexError: iloc cannot enlarge
+            its target object'?"
+          - What is the difference between pandas DataFrame.take() and iloc for
+            positional row selection?
+          system: You are a Python data-analysis assistant. Solve the user's
+            pandas problem with a clear example.
+        model:
+          name: Qwen/Qwen3-0.6B
+          device: cpu
+          dtype: float32
+          cpu_threads: 4
+          attn_implementation: sdpa
+          enable_thinking: false
+        paths:
+          models: models
+          metrics: metrics
+          curves: docs/curves.png
+          compare: docs/compare.md
+    outs:
+    - path: docs/compare.md
+      hash: md5
+      md5: 451a9c89dc4f8a5d491970932e937ee0
+      size: 5633
+    - path: metrics/compare_all_layers.json
+      hash: md5
+      md5: 8960fe7e1cdedfb4dca7eaaaf1fdca2d
+      size: 4859

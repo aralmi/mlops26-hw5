@@ -33,6 +33,7 @@ def main() -> None:
         ax.grid(alpha=.3)
     ax_t.set_ylabel("loss на токен ответа")
     ax_t.legend(fontsize=8)
+    ax_v.legend(fontsize=9)
     fig.tight_layout()
     out = Path(params["paths"]["curves"])
     out.parent.mkdir(parents=True, exist_ok=True)

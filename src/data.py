@@ -22,7 +22,7 @@ def load_split(path: str) -> dict:
             "Вход стадии train — выход стадии tokenize из ДЗ 4 (data/tokenized/*.pt).\n"
             "Укажите пути к своим файлам в params.yaml, секция data."
         )
-    blob = torch.load(p, weights_only=False)
+    blob = torch.load(p, weights_only=True)
     if not blob.get("examples"):
         raise SystemExit(f"{p}: в файле нет примеров")
     return blob

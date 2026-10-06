@@ -2,11 +2,10 @@
 # ни learning rate, ни путей.
 model:
   name: "Qwen/Qwen3-0.6B"
-  device: "auto"            # auto | cpu | cuda | mps
-  # Базовые веса в bfloat16: они заморожены, точность им не нужна, а память
-  # и время уходят вдвое. Сами матрицы LoRA peft держит в float32 — там идут
-  # крошечные обновления AdamW. На старом CPU без bf16 ставьте float32.
-  dtype: "bfloat16"
+  device: "cpu"             # MPS backward на этом Mac оказался неустойчив
+  dtype: "float32"
+  cpu_threads: 4
+  attn_implementation: "sdpa"
   enable_thinking: false    # как в ДЗ 4: шаблон должен совпадать с обучением
 
 data:
@@ -24,18 +23,25 @@ lora:
 
 train:
   seed: 42
+  # Фиксированная выборка из исходных тензоров ДЗ4 сокращает время на CPU.
+  # null для обоих лимитов возвращает полный набор; исходные файлы не меняются.
+  train_limit: 256
+  val_limit: 32
+  subset_seed: 42
   epochs: 1
-  batch_size: 2
-  grad_accum: 4             # эффективный батч = 8: память как у батча 2, шаг как у батча 8
-  lr: 1.0e-2
+  batch_size: 1
+  grad_accum: 8             # эффективный батч = 8; безопасно при длине до 3456 токенов
+  lr: 2.0e-4
   warmup_ratio: 0.03
   weight_decay: 0.0
   max_grad_norm: 1.0
+  loss_chunk_tokens: 128      # ограничение памяти lm_head на длинных ответах
   eval_every: 10            # шагов оптимизатора между замерами val loss
-  # Логиты на весь словарь: 2 примера x 512 токенов x 151 936 x 4 байта = 0,6 ГБ.
-  # Батч 8 на оценке — уже 2,5 ГБ одних логитов, и ноутбук уходит в своп.
-  eval_batch_size: 2
-  gradient_checkpointing: true   # без него на ноутбуке с 16–32 ГБ не влезает
+  # Наше ДЗ 4 допускает до 3456 токенов: оценка по одному примеру
+  # ограничивает пик логитов и памяти на MacBook Air M2 16 ГБ.
+  eval_batch_size: 1
+  gradient_checkpointing: true
+  gradient_checkpointing_min_tokens: 1024 # короткие входы быстрее без пересчёта
   max_steps: null           # null — по эпохам; число — обрезать (smoke-тесты)
 
 # Эксперимент по слоям: второй прогон без адаптеров на первых N слоях.
@@ -46,15 +52,15 @@ variants:
     freeze_first: 14
 
 compare:
-  max_new_tokens: 40
+  max_new_tokens: 192
   # Пять фиксированных промптов: одни и те же для базовой модели и адаптера.
   prompts:
-    - "Тема:\nАртериальная гипертензия у взрослых\n\nВопрос:\nЦелевой уровень систолического АД у большинства пациентов моложе 65 лет составляет\n\nВарианты ответа:\n0. 150–159 мм рт. ст.\n1. 120–130 мм рт. ст.\n2. 140–149 мм рт. ст.\n3. менее 110 мм рт. ст."
-    - "Тема:\nСахарный диабет 2 типа у взрослых\n\nВопрос:\nПрепаратом первой линии при отсутствии противопоказаний является\n\nВарианты ответа:\n0. инсулин гларгин\n1. метформин\n2. глибенкламид\n3. акарбоза"
-    - "Тема:\nВнебольничная пневмония у взрослых\n\nВопрос:\nОсновным методом подтверждения диагноза пневмонии является\n\nВарианты ответа:\n0. общий анализ крови\n1. рентгенография органов грудной клетки\n2. бактериоскопия мокроты\n3. спирометрия"
-    - "Тема:\nЖелезодефицитная анемия\n\nВопрос:\nНаиболее информативный показатель запасов железа в организме\n\nВарианты ответа:\n0. сывороточное железо\n1. цветовой показатель\n2. ферритин сыворотки\n3. количество ретикулоцитов"
-    - "Тема:\nОстрый аппендицит у взрослых\n\nВопрос:\nСимптом Щёткина–Блюмберга указывает на\n\nВарианты ответа:\n0. раздражение брюшины\n1. кишечную непроходимость\n2. почечную колику\n3. холецистит"
-  system: "Ты отвечаешь на русскоязычные тестовые вопросы НМО. Дан вопрос и варианты ответа с нумерацией с 0. Выбери один правильный вариант. Ответь только номером варианта и текстом ответа, без объяснений."
+    - "How do I get the last value of a pandas Series when its index labels are not consecutive?"
+    - "How do I convert a pandas DataFrame to a list of dictionaries without including the row index?"
+    - "Can I set a pandas DataFrame index name in the constructor? Show a short code example."
+    - "Why does assigning to df.iloc[i, j] raise 'IndexError: iloc cannot enlarge its target object'?"
+    - "What is the difference between pandas DataFrame.take() and iloc for positional row selection?"
+  system: "You are a Python data-analysis assistant. Solve the user's pandas problem with a clear example."
 
 paths:
   models: "models"

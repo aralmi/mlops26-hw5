@@ -1,5 +1,12 @@
 __pycache__/
 .venv/
+.uv-cache/
+.cache/
+.check-tmp/
+.DS_Store
+*.pyc
+*.bak
+*.orig
 # Адаптеры и токенизированные данные — артефакты стадий, под DVC, не в git
 data/
 models/

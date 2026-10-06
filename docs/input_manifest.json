@@ -1,0 +1,11 @@
+{
+  "source_repository": "https://github.com/aralmi/mlops26-hw4",
+  "source_commit": "026e8c94671f30ae9fb2ca3cccbc3018f41d3712",
+  "source_stage": "tokenize",
+  "dvc_directory_md5": "ce5d344c3ae07497e2afe51bd3888e30.dir",
+  "train_pt_sha256": "7f026d9fbc6f5c8cef9b6505dd663642b50bab23a151d545bc5f7e127a5e11c9",
+  "val_pt_sha256": "fa29644781ac07898b46accef2b64a4f0ba1a70dfae52137a0ff1314fb9f819e",
+  "train_examples": 1388,
+  "val_examples": 154,
+  "max_seq_len": 3456
+}
